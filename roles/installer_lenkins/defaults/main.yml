@@ -1,0 +1,9 @@
+---
+# defaults file for installer_lenkins
+#
+url_repo_key     : https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+url_download_file: https://pkg.jenkins.io/redhat-stable/jenkins.repo
+path_repo_jenkins: /etc/yum.repos.d/jenkins.repo
+ubu_url_repo_key : https://pkg.jenkins.io/debian/jenkins.io.key
+ubu_url_download_file: deb http://pkg.jenkins.io/debian-stable binary/
+ubu_path_repo_jenkins: /etc/apt/sources.list.d/jenkins.list

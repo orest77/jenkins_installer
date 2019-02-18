@@ -1,0 +1,139 @@
+---
+# tasks file for installer_lenkins
+
+- block: #========Block for READHAT=========
+    - name: install wget
+      yum:
+        name : wget
+        state: present
+
+    - name: install openjdk
+      yum:
+        name : java-1.8.0-openjdk
+        state: present
+
+    - name: import jenkins key
+      rpm_key:
+        state: present
+        key  : "{{ url_repo_key }}"
+
+    - name: download jenkins file
+      get_url:
+        url : "{{ url_download_file }}"
+        dest: "{{ path_repo_jenkins }}"
+
+    - name: instal jenkins
+      yum:
+        name : jenkins
+        state: present
+
+    - name: start jenkins
+      systemd:
+        name : jenkins
+        state: started
+
+    - name: enable jenkins
+      systemd:
+        name: jenkins
+        enabled: true
+
+    - name: Open port 8080
+      firewalld:
+        port: 8080/tcp
+        zone: public
+        permanent: true
+        state: enabled
+        immediate: yes
+
+
+    - name: restarted jenkins
+      systemd:
+        name : jenkins
+        state: restarted
+      notify:
+        - sleep for 30 seconds and continue with play
+        - init password jenkin
+        - print init password jenkins
+
+  when: ansible_os_family == "RedHat"
+
+
+- block: #========Block for DEBIAN=========
+
+    - name: install wget ubuntu
+      apt:
+        name : wget
+        state: present
+
+    - name: install openjdk ubuntu
+      apt:
+        name : openjdk-8-jdk
+        state: present
+
+    - name: import jenkins key
+      apt_key:
+        url  : "{{ ubu_url_repo_key }}"
+        state: present
+
+    - name: add to repo jenkins file
+      apt_repository:
+        repo: "{{ ubu_url_download_file }}"
+        state: present
+        filename: "{{ ubu_path_repo_jenkins }}"
+
+
+
+    - name: Update jenkins
+      apt:
+        update_cache: yes
+
+    - name: instal jenkins
+      apt:
+        name : jenkins
+        state: present
+
+    - name: Chenge port jenkin on 8081
+      lineinfile:
+        path: /etc/default/jenkins
+        regexp: '^HTTP_PORT=8080'
+        line: 'HTTP_PORT=8081'
+
+
+    - name: start jenkins
+      systemd:
+        name : jenkins
+        state: started
+
+    - name: enable jenkins
+      systemd:
+        name: jenkins
+        enabled: true
+
+
+    - name: Open port 8081
+      ufw:
+        rule: allow
+        port: 8081
+
+
+    - name: Opena SSH
+      ufw:
+        rule: allow
+        name: OpenSSH
+
+    - name: Enable Firewall
+      ufw:
+        state: enabled
+        policy: allow
+
+    - name: restarted jenkins
+      systemd:
+        name : jenkins
+        state: restarted
+      notify:
+        - sleep for 30 seconds and continue with play
+        - init password jenkin
+        - print init password jenkins
+
+  when: ansible_os_family == "Debian"
+

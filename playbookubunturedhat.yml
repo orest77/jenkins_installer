@@ -1,0 +1,171 @@
+
+---
+- name: Install Jenkins
+  hosts: PROD_SERVERS
+  become: yes
+
+  vars:
+    url_repo_key     : https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+    url_download_file: https://pkg.jenkins.io/redhat-stable/jenkins.repo
+    path_repo_jenkins: /etc/yum.repos.d/jenkins.repo
+    ubu_url_repo_key : https://pkg.jenkins.io/debian/jenkins.io.key
+    ubu_url_download_file: deb http://pkg.jenkins.io/debian-stable binary/
+    ubu_path_repo_jenkins: /etc/apt/sources.list.d/jenkins.list
+
+  tasks:
+  - name: Check and Print Linux version
+    debug: var=ansible_os_family
+
+  - block: #========Block for READHAT=========
+
+      - name: install wget
+        yum:
+          name : wget
+          state: present
+
+      - name: install openjdk
+        yum:
+          name : java-1.8.0-openjdk
+          state: present
+
+      - name: import jenkins key
+        rpm_key:
+          state: present
+          key  : "{{ url_repo_key }}"
+
+      - name: download jenkins file
+        get_url:
+          url : "{{ url_download_file }}"
+          dest: "{{ path_repo_jenkins }}"
+
+      - name: instal jenkins
+        yum:
+          name : jenkins
+          state: present
+
+      - name: start jenkins
+        systemd:
+          name : jenkins
+          state: started
+
+      - name: enable jenkins
+        systemd:
+          name: jenkins
+          enabled: true
+
+      - name: Open port 8080
+        firewalld:
+          port: 8080/tcp
+          zone: public
+          permanent: true
+          state: enabled
+          immediate: yes
+
+
+      - name: restarted jenkins
+        systemd:
+          name : jenkins
+          state: restarted
+        notify:
+          - sleep for 30 seconds and continue with play
+          - init password jenkin
+          - print init password jenkins
+
+
+    when: ansible_os_family == "RedHat"
+
+
+  - block: #========Block for DEBIAN=========
+
+      - name: install wget ubuntu
+        apt:
+          name : wget
+          state: present
+
+      - name: install openjdk ubuntu
+        apt:
+          name : openjdk-8-jdk
+          state: present
+
+      - name: import jenkins key
+        apt_key:
+          url  : "{{ ubu_url_repo_key }}"
+          state: present
+
+      - name: add to repo jenkins file
+        apt_repository:
+          repo: "{{ ubu_url_download_file }}"
+          state: present
+          filename: "{{ ubu_path_repo_jenkins }}"
+
+
+
+      - name: Update jenkins
+        apt:
+          update_cache: yes
+
+      - name: instal jenkins
+        apt:
+          name : jenkins
+          state: present
+
+      - name: Chenge port jenkin on 8081
+        lineinfile:
+          path: /etc/default/jenkins
+          regexp: '^HTTP_PORT=8080'
+          line: 'HTTP_PORT=8081'
+
+
+      - name: start jenkins
+        systemd:
+          name : jenkins
+          state: started
+
+      - name: enable jenkins
+        systemd:
+          name: jenkins
+          enabled: true
+
+
+      - name: Open port 8081
+        ufw:
+          rule: allow
+          port: 8081
+
+
+      - name: Opena SSH
+        ufw:
+          rule: allow
+          name: OpenSSH
+
+      - name: Enable Firewall
+        ufw:
+          state: enabled
+          policy: allow
+
+      - name: restarted jenkins
+        systemd:
+          name : jenkins
+          state: restarted
+        notify:
+          - sleep for 30 seconds and continue with play
+          - init password jenkin
+          - print init password jenkins
+
+    when: ansible_os_family == "Debian"
+
+
+  handlers:
+  - name: sleep for 30 seconds and continue with play
+    wait_for: timeout=50
+    delegate_to: localhost
+
+  - name: init password jenkin
+    shell: cat /var/lib/jenkins/secrets/initialAdminPassword
+    changed_when: false
+    register: result
+
+  - name: print init password jenkins
+    debug:
+      var: result.stdout
+

@@ -1,0 +1,8 @@
+
+---
+- name: Install Jenkins
+  hosts: "{{ JENKINS_HOST }}"
+  become: yes
+
+  roles:
+    - { role: installer_lenkins, when: ansible_system == "Linux" }
